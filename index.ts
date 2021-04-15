@@ -1,4 +1,7 @@
+import bodyParser from "body-parser";
 import Server from "./clases/server";
+import inicioRutas from "./rutas/inicio";
+import thumbnailRutas from "./rutas/thumbnail";
 
 const server = new Server();
 
@@ -24,12 +27,13 @@ connection.connect((err: any) => {
     console.log('conectado a mysql');
 });
 
+//Body parser   
+server.app.use(bodyParser.urlencoded({extended: true}));
+server.app.use(bodyParser.json());
 
-//consulta de prueba
-
-connection.query('select  concat(file_url, file_name) as image from product_images; ', (err: any, rows: any) => {
-    if(err) throw err;
-
-    console.log('data received from db');
-    console.log(rows);
-});
+//views
+// server.app.set('views', path.join(__dirname, 'views'));
+server.app.set('view engine', 'ejs');
+//rutas
+server.app.use('/', inicioRutas);
+server.app.use('/thumbnail', thumbnailRutas);
