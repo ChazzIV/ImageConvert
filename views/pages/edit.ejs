@@ -18,26 +18,72 @@
         <div class="card-header">
             <ul class="nav nav-pills w-100">
                 <li class="nav-pill active">
-                    <a class="nav-link">Actualizar imagen</a>
+                    <a class="nav-link">Agregar Thumbnail a la imagen</a>
+                </li>
+                <li class="nav-pill active">
+                    <a href="/" class="nav-link">regresar</a>
                 </li>
             </ul>
         </div>
         <div class="card-body">
 
-            <form action="" method="post">
+            <form action="/update/<%= id %>" method="post">
                 <div class="form-group">
-                    <input type='file' id="imgInp" />
-                    <img id="blah" src="#" />
+                    <label>Product ID:</label>
+                    <input type="text" class="form-control" name="id" value="<%= id %>" autocomplete="off">
                 </div>
+                <%if (sku.length > 0) { %>
+                    <div class="form-group">
+                        <label>SKU:</label>
+                        <input type="text" class="form-control" name="has_sku" value="si" autocomplete="off">
+                    </div>
+                    <% } else { %>
+                        <div class="form-group">
+                            <label>SKU:</label>
+                            <input type="text" class="form-control" name="has_sku" value="no" autocomplete="off">
+                        </div>
+                        <% } %>
 
-                <div class="form-group">
-                    <input type="submit" class="btn btn-info" value="Update" />
-                </div>
+                            <div class="form-group">
+                                <label>Proces:</label>
+                                <input type="text" class="form-control" name="process" value="ok" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label>image:</label>
+                                <img src="<%= image %>" style="width:150px;height:150px;">
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="thumbs_name" id="input-files" class="form-control-file border" />
+                            </div>
+
+                            <div class="form-group">
+                                <input type="submit" class="btn btn-info" value="Update" />
+                            </div>
             </form>
         </div>
 
-
-
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                let imagesPreview = function(input, placeToInsertImagePreview) {
+                    if (input.files) {
+                        let filesAmount = input.files.length;
+                        for (i = 0; i < filesAmount; i++) {
+                            let reader = new FileReader();
+                            reader.onload = function(event) {
+                                $($.parseHTML("<img>"))
+                                    .attr("src", event.target.result)
+                                    .appendTo(placeToInsertImagePreview);
+                            };
+                            reader.readAsDataURL(input.files[i]);
+                        }
+                    }
+                };
+                $("#input-files").on("change", function() {
+                    imagesPreview(this, "div.preview-images");
+                });
+            });
+        </script>
 </body>
 
 </html>

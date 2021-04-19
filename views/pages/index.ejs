@@ -21,7 +21,7 @@
                     <a class="nav-link">Imagenes</a>
                 </li>
                 <li class="nav-pill ml-auto">
-                    <a class="nav-link active" href="#">Agregar Imagen</a>
+                    <a class="nav-link active" href="/add">Agregar Imagen</a>
                 </li>
             </ul>
         </div>
@@ -32,7 +32,8 @@
                     <thead>
                         <tr>
                             <th scope="col">id</th>
-                            <th scope="col">nombre</th>
+                            <th scope="col">Imagen</th>
+                            <th scope="col">sku</th>
                             <th scope="col">acciones</th>
                         </tr>
                     </thead>
@@ -42,10 +43,15 @@
                                 <th scope="row">
                                     <%= data[i].id %>
                                 </th>
-                                <td>
+                                <!-- <td>
                                     <img src="<%='https://andalegrupo.com/catalogs'+ '/' + data[i].image%>" alt="" width="150px" height="150px">
-
+                                </td> -->
+                                <td>
+                                    <img src="<%= data[i].image%>" alt="" width="150px" height="150px">
                                 </td>
+                                <th scope="row">
+                                    <%= data[i].sku %>
+                                </th>
                                 <td>
                                     <a class="btn btn-success edit" href="../edit/<%=data[i].id%>">Agregar Thumbnail</a>
                                 </td>
