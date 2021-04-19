@@ -50,7 +50,7 @@ inicioRutas.get('/', function(req, res, next){
     // const limit = 30;
     // const page: any = req.query.page;
     // const offset = (page -1) * limit;
-    const sql = 'select product_images.image_id as id ,product_options.sku as sku, concat(product_images.file_url, product_images.file_name) as image from product_options inner join product_images on product_images.option_id  = product_options.option_id order by id desc limit 200;';   
+    const sql = 'select product_images.image_id as id ,product_options.sku as sku, concat(product_images.file_url, product_images.file_name) as image from product_options inner join product_images on product_images.option_id  = product_options.option_id order by id desc;';   
     connection.query(sql, function(err: any, rows: any) {
         if(err) {
             res.render('pages/index', {data: ''});

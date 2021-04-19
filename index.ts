@@ -1,12 +1,13 @@
 import bodyParser from "body-parser";
 import Server from "./clases/server";
 import inicioRutas from "./rutas/inicio";
-import thumbnailRutas from "./rutas/thumbnail";
 import path from 'path';
+import { NOTFOUND } from "node:dns";
 const multer = require('multer');
 const sharp = require('sharp');
 const fs = require("fs");
 const got = require("got");
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 
 const server = new Server();
@@ -58,7 +59,7 @@ connection.connect((err: any) => {
 //function to encode file data to base64 encoded string
 function base64_encode(file: any) {
     // read binary data
-    var bitmap = fs.readFileSync(`uploads/thumbnails/${file}`, { encoding: 'base64' });
+    var bitmap = fs.readFileSync(`images/uploads/thumbnails/${file}`, { encoding: 'base64' });
     // convert binary data to base64 encoded string
     return bitmap.toString('base64');
 }
@@ -103,11 +104,16 @@ function getTime(){
   
 
 // SQL
+var n1 = 0;
+var n2 = 500;
 
-const sql = 'select product_images.image_id as id ,product_options.sku as sku, concat(product_images.file_url, product_images.file_name) as image from product_options inner join product_images on product_images.option_id  = product_options.option_id order by id desc limit 1;';    
+const sql = 'select product_options.option_id as id,product_options.sku as sku, concat(product_images.file_url, product_images.file_name) as image from product_options inner join product_images on product_images.option_id  = product_options.option_id where product_options.option_id between ' + n1 + ' and ' + n2;    
+//where product_images.image_id= 4591
+//order by id desc limit 5
 
 
-//consulta de prueba
+// consulta de prueba
+
 connection.query(sql , (err: any, rows: any, response: any) => {
     if (err)
     throw err;
@@ -118,89 +124,154 @@ connection.query(sql , (err: any, rows: any, response: any) => {
         let sku = row.sku;
         let id = row.id;
         let thumbnail_name = `thumbnail-${sku}.jpg`;
+        let name: any;
+        let thumbnail_nosku = `thumbnail-${id}.jpg`;
+
         let thumbnail_file = `images/uploads/thumbnails/`;
-        // let h_sku: boolean = sku.length > 0 ? has_sku = 1 : has_sku = 0;
+
         let has_sku: any;
-
         let process: any;
-
-   
         let created_at = getTime();
 
-        const sharpStream = sharp({
-            failOnError: false
-          });
-        const promises: any = [];
+
+        var thumbnail_noimage;
+        var image_url = `${imageURL}${row.image}`;
+
+
+        function checkImage(image_url: any) {
+            var request = new XMLHttpRequest();
+            request.open("GET", image_url, true);
+            request.send();
+            request.onload = function() {
+            let status: number = request.status;
+              if (request.status == 200) //if(statusText == OK)
+              {
+                  
+                const sharpStream = sharp({
+                    failOnError: false
+                });
+                const promises: any = [];
+
+                //si no tiene sku la imagen se guarda con el id.jpg
+                if (sku === null){ 
+                    promises.push(
+                        sharpStream
+                            .clone()
+                            .resize({ width: 250 })
+                            .resize({ height: 250 })
+                            .jpeg({ quality: 80 })
+                            .toFile(`${thumbnail_file}${thumbnail_nosku}`)
+                        );
+
+                        name = thumbnail_nosku;
         
-        promises.push(
-        sharpStream
-            .clone()
-            .resize({ width: 250 })
-            .resize({ height: 250 })
-            .jpeg({ quality: 80 })
-            .toFile(`${thumbnail_file}${thumbnail_name}`)
-        );
+                } else {
+                    promises.push(
+                        sharpStream
+                            .clone()
+                            .resize({ width: 250 })
+                            .resize({ height: 250 })
+                            .jpeg({ quality: 80 })
+                            .toFile(`${thumbnail_file}${thumbnail_name}`)
+                        );
+                        name = thumbnail_name;
+                }
+                
 
-        got.stream(`${imageURL}` + row.image).pipe(sharpStream);
-        Promise.all(promises)
-        .then(res => {
-            //  console.log("Done!", res);
-            // convert image to base64 encoded string
-            // var base64str = base64_encode(`${thumbnail_file}${thumbnail_name}`);
-            var base64str = base64_encode(`${thumbnail_name}`);
+                // console.log("exist");
+                got.stream(image_url).pipe(sharpStream);
+                Promise.all(promises)
+                .then(res => {
+                    //  console.log("Done!", res);
+                    // convierte la imagen a base64 dependiendo si tiene sku o no cambia su nombre
+                    if (sku === null){
+                        var base64str = base64_encode(`${thumbnail_nosku}`);
+                    }else {
 
-            // console.log(base64str);
-            // console.log(base64str);
-            //query insert
-            if (sku.length > 0) has_sku = 1;
-            else has_sku = 0;
-            
-            if (promises) process = 1;
-            else  process = 0;
-            
-            var form_data = {
-                option_id: id,
-                thumbs_name: thumbnail_name,
-                thumbs_file: thumbnail_file,
-                has_sku: has_sku,
-                process: process,
-                base64: base64str,
-                created_at: created_at
+                        var base64str = base64_encode(`${thumbnail_name}`);
+                    }
+                    // console.log(base64str);
+                    //query insert
+
+                    // si no tiene sku guarda un 0 y si tiene sku guarda un 1
+                    if (sku === null)
+                        has_sku = 0;
+                    else 
+                        has_sku = 1;
+                    // si la imagen fue procesada guarda un 1
+                    process = 1;
+                    
+                    var form_data = {
+                        option_id: id,
+                        thumbs_name: name,
+                        thumbs_file: thumbnail_file,
+                        has_sku: has_sku,
+                        process: process,
+                        base64: base64str,
+                        created_at: created_at
+                    }
+                    // console.log(values);
+                    connection.query("INSERT INTO product_thumbs set ?", [form_data], function (err: any, res: any) {
+                        if(err) {
+                            console.log("error: ", err);
+                            res(err, null);
+                        }
+                        else{
+                            var iIDCreated = res.insertId;
+                            response.iIDCreated
+                        }
+                    })
+                    
+                })
+                .catch(err => {
+                    console.error("Error", err);
+                    try {
+                    fs.unlinkSync(`${sku}.jpg`);
+                    } catch (e) {}
+                });
+              } else {
+                // console.log("image doesn't exist");
+                if (sku === null) thumbnail_name = `${id}.jpg`;
+                else thumbnail_name = thumbnail_name;
+                if (sku === null)
+                    has_sku = 0;
+                else 
+                    has_sku = 1;
+                var form_data = {
+                    option_id: id,
+                    thumbs_name: thumbnail_name,
+                    thumbs_file: thumbnail_file,
+                    has_sku: has_sku,
+                    process: 0,
+                    base64: 0,
+                    created_at: created_at
+                }
+                var values = [form_data];
+                // console.log(values);
+                connection.query("INSERT INTO product_thumbs set ?", values, function (err: any, res: any) {
+                    if(err) {
+                        console.log("error: ", err);
+                        res(err, null);
+                    }
+                    else{
+                        var iIDCreated = res.insertId;
+                        response.iIDCreated
+                    }
+                })
+              }
             }
-            var values = [form_data];
-            //console.log(values);
-            // connection.query("INSERT INTO product_thumbs set ?", values, function (err: any, res: any) {
-            //     if(err) {
-            //         console.log("error: ", err);
-            //         res(err, null);
-            //     }
-            //     else{
-            //         var iIDCreated = res.insertId;
-            //         response.iIDCreated
-            //         // console.log(res.insertId);
-            //         // res(null, res.insertId);
-            //     }
-            // })
-            
-        })
-        .catch(err => {
-            console.error("Error", err);
-            try {
-            fs.unlinkSync(`${sku},jpg`);
-            } catch (e) {}
-        });
+          }
 
-    });
-
-
-
-
-    // console.log(rows[0].image);    
+         checkImage(image_url);
+          
+       
+    // console.log(rows[0].image);  
+    
+    
 });
 
-//views
-// server.app.set('views', path.join(__dirname, 'views'));
-server.app.set('view engine', 'ejs');
-//rutas
-server.app.use('/', inicioRutas);
-server.app.use('/thumbnail', thumbnailRutas);
+// //views
+// // server.app.set('view engine', 'ejs');
+// //rutas
+// // server.app.use('/', inicioRutas);
+// });
